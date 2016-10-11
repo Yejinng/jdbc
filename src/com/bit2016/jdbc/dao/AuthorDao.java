@@ -3,61 +3,173 @@ package com.bit2016.jdbc.dao;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.List;
 
 import com.bit2016.jdbc.vo.AuthorVo;
 
 public class AuthorDao {
 
-	public void insert (AuthorVo vo ){
+	private Connection getConnection() throws SQLException {
+		Connection conn = null;
+
+		try {
+			Class.forName("oracle.jdbc.driver.OracleDriver");
+
+			String url = "jdbc:oracle:thin:@localhost:1521:xe";
+			conn = DriverManager.getConnection(url, "bitdb", "bitdb");
+
+		} catch (ClassNotFoundException e) {
+			System.out.println("드라이버 로딩 실패:" + e);
+		}
+
+		return conn;
+	}
+
+	public boolean update(AuthorVo vo) {
 		Connection conn = null;
 		PreparedStatement pstmt = null;
+		int result = 0;
+		
 		try {
-			// 1. JDBC 드라이버 (Oracle) 로딩
-			Class.forName("oracle.jdbc.driver.OracleDriver");
-			
-			// 2. Connection 얻어오기			
-			String url = "jdbc:oracle:thin:@localhost:1521:xe";
-			conn = 
-					DriverManager.getConnection(url, "bitdb", "bitdb");
-			
-			// 3. Statement 생성
-//			pstmt = conn.prepareStatement(url);
-			
-			// 4.SQL실행
-			Long no = 14L;
-			String title = "토지10";
-			String date = "2016-10-10";
-			String state = "대여가능";
-			Long authorNo = 1L;
-			
-			String sql =
-					"insert into author values (?, ?)";
+			conn = getConnection();
+
+			String sql = "update author set name = ? where no = ?";
 			pstmt = conn.prepareStatement(sql);
-			
-			pstmt.setLong(1, no);
-			pstmt.setString(2, title);
-			
-			int count = pstmt.executeUpdate(sql);
-			System.out.println(count);
-		} catch (ClassNotFoundException e) {
-			System.out.println("드라이버 로딩 실패:" + e );
+
+			pstmt.setString(1, vo.getName());
+			pstmt.setLong(2, vo.getNo());
+
+			result = pstmt.executeUpdate();
+
 		} catch (SQLException e) {
-			System.out.println("error:" + e );
+			System.out.println("error:" + e);
 		} finally {
 			try {
-			// 3. 자원정리	
-				if(pstmt != null){
+				if (pstmt != null) {
 					pstmt.close();
 				}
-				if(conn != null){
-				conn.close();
+				if (conn != null) {
+					conn.close();
+				}
+			} catch (SQLException e) {
+				System.out.println("error:" + e);
+			}
+		}
+
+		return result == 1;
+	}
+
+	public boolean delete(Long no) {
+		Connection conn = null;
+		PreparedStatement pstmt = null;
+		int result = 0;
+		try {
+			conn = getConnection();
+
+			String sql = "delete from author where no = ?";
+			pstmt = conn.prepareStatement(sql);
+
+			pstmt.setLong(1, no);
+
+			result = pstmt.executeUpdate();
+
+		} catch (SQLException e) {
+			System.out.println("error:" + e);
+		} finally {
+			try {
+				if (pstmt != null) {
+					pstmt.close();
+				}
+				if (conn != null) {
+					conn.close();
+				}
+			} catch (SQLException e) {
+				System.out.println("error:" + e);
+			}
+		}
+
+		return result == 1;
+	}
+
+	public List<AuthorVo> getList() {
+		List<AuthorVo> list = new ArrayList<AuthorVo>();
+		
+		Connection conn = null;
+		Statement stmt = null;
+		ResultSet rs = null;
+
+		try {
+			conn = getConnection();
+			stmt = conn.createStatement();
+
+			String sql = "select no, name from author order by no asc";
+			rs = stmt.executeQuery(sql);
+
+			while (rs.next()) {
+				Long no = rs.getLong(1);
+				String name = rs.getString(2);
+
+				AuthorVo vo = new AuthorVo();
+				vo.setNo(no);
+				vo.setName(name);
+
+				list.add(vo);
+			}
+		} catch (SQLException e) {
+			System.out.println("error:" + e);
+		} finally {
+			try {
+				if (rs != null) {
+					rs.close();
+				}
+				if (stmt != null) {
+					stmt.close();
+				}
+				if (conn != null) {
+					conn.close();
+				}
+			} catch (SQLException e) {
+				System.out.println("error:" + e);
+			}
+		}
+		return list;
+	}
+
+	public boolean insert(AuthorVo vo) {
+		Connection conn = null;
+		PreparedStatement pstmt = null;
+		int result = 0;
+		try {
+			// 1. connection 가져오기
+			conn = getConnection();
+			// 2. statement 준비
+			String sql = "insert into author values (author_seq.nextval, ?)";
+			pstmt = conn.prepareStatement(sql);
+			// 3. 바인딩
+			pstmt.setString(1, vo.getName());
+			// 4. 실행
+			result = pstmt.executeUpdate();
+
+		} catch (SQLException e) {
+			System.out.println("error:" + e);
+		} finally {
+			try {
+				// 3. 자원정리
+				if (pstmt != null) {
+					pstmt.close();
+				}
+				if (conn != null) {
+					conn.close();
 				}
 			} catch (SQLException e) {
 				e.printStackTrace();
-			}	
-			
+			}
+
 		}
+		return result ==1;
 	}
 }
